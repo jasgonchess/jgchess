@@ -11,3 +11,11 @@ class InvalidFENException(ChessDBException):
 class DatabaseException(Exception):
     """Raised when a database operation fails."""
     pass
+
+class InvalidMoveException(ChessDBException):
+    """Raised when the provided move is invalid."""
+    pass
+
+class InvalidPositionException(ChessDBException):
+    """Raised when the provided position is invalid."""
+    pass

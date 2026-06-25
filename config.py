@@ -102,3 +102,37 @@ FEN_TO_NIBBLE: dict[str, int] = {
     'K': NIBBLE_WHITE_KING_WHITE_TO_MOVE,
     'k': NIBBLE_BLACK_KING,
 }
+
+# ---------------------------------------------------------------------------
+# Nibble sets by color
+# Useful for quickly determining the color of a piece on a given square
+# without a chain of comparisons.
+# ---------------------------------------------------------------------------
+
+#: All nibble values that represent a White piece.
+WHITE_NIBBLES: frozenset[int] = frozenset({
+    NIBBLE_WHITE_PAWN,
+    NIBBLE_WHITE_KNIGHT,
+    NIBBLE_WHITE_BISHOP,
+    NIBBLE_WHITE_ROOK_NO_CASTLE,
+    NIBBLE_WHITE_ROOK_CAN_CASTLE,
+    NIBBLE_WHITE_QUEEN,
+    NIBBLE_WHITE_KING_WHITE_TO_MOVE,
+    NIBBLE_WHITE_KING_BLACK_TO_MOVE,
+})
+
+#: All nibble values that represent a Black piece.
+BLACK_NIBBLES: frozenset[int] = frozenset({
+    NIBBLE_BLACK_PAWN,
+    NIBBLE_BLACK_KNIGHT,
+    NIBBLE_BLACK_BISHOP,
+    NIBBLE_BLACK_ROOK_NO_CASTLE,
+    NIBBLE_BLACK_ROOK_CAN_CASTLE,
+    NIBBLE_BLACK_QUEEN,
+    NIBBLE_BLACK_KING,
+})
+
+WHITE_KING_NIBBLES: frozenset[int] = frozenset({
+    NIBBLE_WHITE_KING_WHITE_TO_MOVE,
+    NIBBLE_WHITE_KING_BLACK_TO_MOVE,
+})

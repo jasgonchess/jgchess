@@ -99,6 +99,73 @@ class Position:
 
         return obj
 
+@classmethod
+def from_db(cls, record: "PositionRecord") -> "Position":
+    """Creates a Position object from a raw database record.
+
+    Reconstructs the full position state by decoding the bitboard
+    and pieces BLOB back into the squares dict, and inferring turn,
+    castling, and en passant from the nibble values.
+
+    Args:
+        record: A PositionRecord returned by databases.fetch_position().
+
+    Returns:
+        A fully populated Position instance.
+
+    Raises:
+        DatabaseException: If the BLOB is malformed or the bitboard
+            is inconsistent with the pieces data.
+    """
+    from exceptions import DatabaseException
+    from utils import to_unsigned_64
+
+    obj = cls()
+    bitboard = to_unsigned_64(record.bitboard)
+    pieces = record.pieces
+
+    # Unpack nibbles from the BLOB
+    nibbles: list[int] = []
+    for byte in pieces:
+        nibbles.append(byte >> 4)
+        nibbles.append(byte & 0x0F)
+
+    # Walk the bitboard LSB-first, assigning one nibble per occupied square
+    occupied_squares = [i for i in range(64) if (bitboard >> i) & 1]
+
+    if len(occupied_squares) != len(nibbles):
+        # The last nibble may be padding if piece count is odd
+        if len(nibbles) - len(occupied_squares) != 1:
+            raise DatabaseException(
+                f"BLOB length mismatch: {len(occupied_squares)} squares "
+                f"but {len(nibbles)} nibbles in record id={record.id}"
+            )
+
+    castling_rights: list[str] = []
+
+    for sq_idx, square in enumerate(occupied_squares):
+        nibble = nibbles[sq_idx]
+        obj.squares[square] = nibble
+
+        # Infer turn from White King nibble
+        if nibble == config.NIBBLE_WHITE_KING_WHITE_TO_MOVE:
+            obj.turn = 'w'
+        elif nibble == config.NIBBLE_WHITE_KING_BLACK_TO_MOVE:
+            obj.turn = 'b'
+
+        # Infer castling rights from Rook nibbles
+        elif nibble == config.NIBBLE_WHITE_ROOK_CASTLING:
+            castling_rights.append('Q' if square == 0 else 'K')
+        elif nibble == config.NIBBLE_BLACK_ROOK_CASTLING:
+            castling_rights.append('q' if square == 56 else 'k')
+
+        # Infer en passant from the special pawn nibble
+        elif nibble == config.NIBBLE_EN_PASSANT_TARGET:
+            obj.en_passant = config.INDEX_TO_SQUARE[square]
+
+    obj.castling = ''.join(castling_rights) if castling_rights else '-'
+
+    return obj
 
 # --- Execução do Teste Principal ---
 if __name__ == "__main__":
