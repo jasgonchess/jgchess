@@ -22,8 +22,6 @@ class Position:
         self.turn: str = 'w'
         self.castling: str = '-'
         self.en_passant: str = '-'
-        self.halfmove: int = 0
-        self.fullmove: int = 1
 
     @classmethod
     def from_fen(cls, fen_string: str) -> "Position":
@@ -46,14 +44,6 @@ class Position:
         obj.turn       = parts[1]
         obj.castling   = parts[2]
         obj.en_passant = parts[3]
-
-        try:
-            obj.halfmove = int(parts[4])
-            obj.fullmove = int(parts[5])
-        except ValueError as exc:
-            raise InvalidFENException(
-                f"Non-integer move counters in FEN: '{fen_string}'"
-            ) from exc
 
         ep_sq = config.SQUARE_TO_INDEX.get(obj.en_passant, -1)
 
@@ -96,6 +86,57 @@ class Position:
 
                 obj.squares[sq] = nibble
                 file += 1
+
+        return obj
+
+    @classmethod
+    def from_squares(cls, squares: dict[int, int]) -> "Position":
+        """Creates a Position object from a squares dict.
+
+        Intended for use by apply_move() after a move has been applied
+        to a copy of the squares dict. Derives turn, castling, and
+        en_passant by inspecting nibble values directly.
+
+        Args:
+            squares: Mapping of board index (0-63) to nibble value (0-15),
+                representing the complete board state including all
+                special nibbles (castling rights, side to move,
+                en passant target).
+
+        Returns:
+            A fully populated Position instance.
+
+        Raises:
+            InvalidFENException: If the squares dict contains no White King,
+                which would make the position structurally invalid.
+        """
+        obj = cls()
+        obj.squares = dict(squares)  # defensive copy
+
+        castling_rights: list[str] = []
+
+        for sq, nibble in squares.items():
+
+            # Side to move — encoded in White King nibble
+            if nibble == config.NIBBLE_WHITE_KING_WHITE_TO_MOVE:
+                obj.turn = 'w'
+            elif nibble == config.NIBBLE_WHITE_KING_BLACK_TO_MOVE:
+                obj.turn = 'b'
+
+            # Castling rights — encoded in Rook nibbles
+            elif nibble == config.NIBBLE_WHITE_ROOK_CAN_CASTLE:
+                castling_rights.append('Q' if sq == config.SQUARE_TO_INDEX['a1'] else 'K')
+            elif nibble == config.NIBBLE_BLACK_ROOK_CAN_CASTLE:
+                castling_rights.append('q' if sq == config.SQUARE_TO_INDEX['a8'] else 'k')
+
+            # En passant target — encoded as special pawn nibble
+            elif nibble == config.NIBBLE_EN_PASSANT_TARGET:
+                obj.en_passant = config.INDEX_TO_SQUARE[sq]
+
+        # Normalise castling string to standard order KQkq
+        order = 'KQkq'
+        sorted_rights = sorted(castling_rights, key=lambda r: order.index(r))
+        obj.castling = ''.join(sorted_rights) if sorted_rights else '-'
 
         return obj
 

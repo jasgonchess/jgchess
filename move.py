@@ -100,7 +100,7 @@ class Move:
     # -----------------------------------------------------------------------
 
     @classmethod
-    def from_algebraic(cls, text: str, position: "Position") -> "Move":
+    def from_short_algebraic(cls, text: str, position: "Position") -> "Move":
         """Creates a Move object from algebraic notation and a Position.
 
         Parses standard algebraic notation (SAN) as found in PGN files,
