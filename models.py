@@ -208,6 +208,24 @@ def from_db(cls, record: "PositionRecord") -> "Position":
 
     return obj
 
+# -----------------------------------
+# Member functions
+# -----------------------------------
+
+def where_piece(self, nibble: int) -> list[int]:
+    """Returns all squares occupied by a piece with the given nibble value.
+
+    Args:
+        nibble: The nibble value to search for (0-15).
+
+    Returns:
+        List of square indices (0-63) where that nibble is found,
+        in ascending order. Empty list if none found.
+    """
+    return [sq for sq, n in self.squares.items() if n == nibble]
+
+
+
 # --- Execução do Teste Principal ---
 if __name__ == "__main__":
     import pytest, sys

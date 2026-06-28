@@ -190,6 +190,100 @@ class Move:
             promotion_piece=promotion_piece,
         )
 
+    @classmethod
+    def from_full_algebraic(cls, text: str, position: "Position") -> "Move":
+        """Creates a Move from full algebraic notation (e.g. 'Ne4-f6', 'Pe2-e4').
+
+        Full algebraic notation always specifies both origin and destination
+        squares explicitly, so no position lookup is needed for disambiguation.
+        Castling and promotion are also supported.
+
+        Args:
+            text: A move string in full algebraic notation,
+                e.g. 'Ne4-f6', 'Pe2-e4', 'O-O', 'Pe7-e8=Q'.
+            position: The current Position (used only for en passant detection).
+
+        Returns:
+            A fully resolved Move instance.
+
+        Raises:
+            InvalidMoveException: If the string cannot be parsed or the
+                origin/destination squares are invalid.
+        """
+        text = text.strip().rstrip('+#')
+
+        # Castling — identical to from_short_algebraic
+        if text in ('O-O', '0-0'):
+            return cls._resolve_castling(position, kingside=True)
+        if text in ('O-O-O', '0-0-0'):
+            return cls._resolve_castling(position, kingside=False)
+
+        # Promotion — strip '=X' suffix
+        promotion_piece: str | None = None
+        if '=' in text:
+            eq_idx = text.index('=')
+            promotion_piece = text[eq_idx + 1:]
+            text = text[:eq_idx]
+            if promotion_piece not in cls.PROMOTION_PIECES:
+                raise InvalidMoveException(
+                    f"Invalid promotion piece '{promotion_piece}'."
+                )
+
+        # Expected format: <Piece><sq_from>-<sq_to>  e.g. 'Ne4-f6' or 'Pe2-e4'
+        # Piece letter is optional for pawns in some implementations
+        if len(text) < 5:
+            raise InvalidMoveException(
+                f"Move string too short for full algebraic notation: '{text}'."
+            )
+
+        if text[0] in 'NBRQKP':
+            piece = text[0]
+            rest = text[1:]  # 'e4-f6'
+        else:
+            piece = 'P'
+            rest = text  # 'e2-e4' without piece letter
+
+        if '-' not in rest:
+            raise InvalidMoveException(
+                f"Missing '-' separator in full algebraic notation: '{text}'."
+            )
+
+        parts = rest.split('-')
+        if len(parts) != 2:
+            raise InvalidMoveException(
+                f"Expected exactly one '-' separator in '{text}'."
+            )
+
+        from_str, to_str = parts
+        if from_str not in config.SQUARE_TO_INDEX:
+            raise InvalidMoveException(
+                f"Invalid origin square '{from_str}' in '{text}'."
+            )
+        if to_str not in config.SQUARE_TO_INDEX:
+            raise InvalidMoveException(
+                f"Invalid destination square '{to_str}' in '{text}'."
+            )
+
+        square_from = config.SQUARE_TO_INDEX[from_str]
+        square_to = config.SQUARE_TO_INDEX[to_str]
+
+        # En passant detection — pawn captures diagonally onto empty square
+        is_en_passant = False
+        if piece == 'P' and square_from % 8 != square_to % 8:
+            if position.squares.get(square_to) is None:
+                captured_sq = (square_from // 8) * 8 + (square_to % 8)
+                if position.squares.get(captured_sq) == config.NIBBLE_EN_PASSANT_TARGET:
+                    is_en_passant = True
+
+        return cls(
+            piece=piece,
+            square_from=square_from,
+            square_to=square_to,
+            is_castling=False,
+            is_en_passant=is_en_passant,
+            promotion_piece=promotion_piece,
+        )
+
     # -----------------------------------------------------------------------
     # Private resolution helpers
     # -----------------------------------------------------------------------
