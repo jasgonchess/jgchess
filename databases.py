@@ -6,7 +6,7 @@ import sqlite3
 from contextlib import contextmanager
 from collections.abc import Generator
 import config
-from exceptions import DatabaseException
+from exceptions import DatabaseConnectionException, DatabaseException
 from dataclasses import dataclass
 
 @contextmanager
@@ -24,20 +24,24 @@ def open_database(db_path: str) -> Generator[sqlite3.Connection, None, None]:
         An open sqlite3.Connection object.
 
     Raises:
-        DatabaseException: If the database file cannot be opened.
+        DatabaseConnectionException: If the database file cannot be opened.
 
     Example:
         with open_database(db_path) as conn:
             insert_position(conn, bitboard, pieces)
             insert_position(conn, bitboard2, pieces2)
     """
+    conn: sqlite3.Connection | None = None
     try:
         conn = sqlite3.connect(db_path)
         yield conn
     except sqlite3.OperationalError as exc:
-        raise DatabaseException(f"Could not open database: {exc}") from exc
+        raise DatabaseConnectionException(
+            f"Could not open database: {exc}", db_path=db_path
+        ) from exc
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 @dataclass
 class PositionRecord:

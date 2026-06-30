@@ -60,31 +60,31 @@ class Move:
                 ('N', 'B', 'R' or 'Q'), or None.
 
         Raises:
-            ValueError: If any argument is outside its valid range.
+            InvalidMoveException: If any argument is outside its valid range.
         """
         if piece not in self.VALID_PIECES:
-            raise ValueError(
+            raise InvalidMoveException(
                 f"Invalid piece '{piece}'. Must be one of {sorted(self.VALID_PIECES)}."
             )
         if not (0 <= square_from <= 63):
-            raise ValueError(
+            raise InvalidMoveException(
                 f"Invalid square_from {square_from}. Must be between 0 and 63."
             )
         if not (0 <= square_to <= 63):
-            raise ValueError(
+            raise InvalidMoveException(
                 f"Invalid square_to {square_to}. Must be between 0 and 63."
             )
         if square_from == square_to:
-            raise ValueError(
+            raise InvalidMoveException(
                 f"square_from and square_to must be different (got {square_from})."
             )
         if promotion_piece is not None and promotion_piece not in self.PROMOTION_PIECES:
-            raise ValueError(
+            raise InvalidMoveException(
                 f"Invalid promotion_piece '{promotion_piece}'. "
                 f"Must be one of {sorted(self.PROMOTION_PIECES)} or None."
             )
         if promotion_piece is not None and piece != 'P':
-            raise ValueError(
+            raise InvalidMoveException(
                 f"Only pawns can promote, but piece is '{piece}'."
             )
 

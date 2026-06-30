@@ -3,6 +3,7 @@
 """Utility functions for jgchess."""
 
 import config
+from exceptions import InvalidPositionException
 from models import Position
 
 def square_to_index(square: str) -> int:
@@ -43,12 +44,12 @@ def position_to_db(position: Position) -> tuple[int, bytes]:
         integer and pieces is a bytes object.
 
     Raises:
-        ValueError: If position.squares contains an invalid square index
-            or nibble value.
+        InvalidPositionException: If position.squares contains an invalid
+            square index or nibble value.
     """
 
     if not isinstance(position, Position):
-        raise ValueError("Expected a Position instance.")
+        raise InvalidPositionException("Expected a Position instance.")
 
     bitboard: int = 0
     nibble_list: list[int] = []
@@ -56,11 +57,17 @@ def position_to_db(position: Position) -> tuple[int, bytes]:
     # position.squares is a dict square:piece where only square with pieces are keys.
     for sq in sorted(position.squares):
         if not (0 <= sq <= 63):
-            raise ValueError(f"Invalid square index: {sq}")
+            raise InvalidPositionException(
+                f"Invalid square index: {sq}", square=sq
+            )
 
         nibble = position.squares[sq]
         if nibble not in config.VALID_NIBBLES:
-            raise ValueError(f"Invalid nibble value {nibble} at square {sq}.")
+            raise InvalidPositionException(
+                f"Invalid nibble value {nibble} at square {sq}.",
+                square=sq,
+                nibble=nibble,
+            )
 
         bitboard |= (1 << sq)  # Each occupied square gets 1. Unoccupied squares remain 0.
         nibble_list.append(nibble)  # Creates a list of pieces in the correct order

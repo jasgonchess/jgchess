@@ -155,10 +155,10 @@ def from_db(cls, record: "PositionRecord") -> "Position":
         A fully populated Position instance.
 
     Raises:
-        DatabaseException: If the BLOB is malformed or the bitboard
-            is inconsistent with the pieces data.
+        DatabaseIntegrityException: If the BLOB is malformed or the
+            bitboard is inconsistent with the pieces data.
     """
-    from exceptions import DatabaseException
+    from exceptions import DatabaseIntegrityException
     from utils import to_unsigned_64
 
     obj = cls()
@@ -177,9 +177,10 @@ def from_db(cls, record: "PositionRecord") -> "Position":
     if len(occupied_squares) != len(nibbles):
         # The last nibble may be padding if piece count is odd
         if len(nibbles) - len(occupied_squares) != 1:
-            raise DatabaseException(
+            raise DatabaseIntegrityException(
                 f"BLOB length mismatch: {len(occupied_squares)} squares "
-                f"but {len(nibbles)} nibbles in record id={record.id}"
+                f"but {len(nibbles)} nibbles in record id={record.id}",
+                position_id=record.id,
             )
 
     castling_rights: list[str] = []
