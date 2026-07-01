@@ -124,7 +124,7 @@ class Move:
                 if no piece can reach the destination, or if more than
                 one piece can reach the destination (ambiguous PGN).
         """
-        from models import Position  # local import to avoid circular dependency
+        from position import Position  # local import to avoid circular dependency
 
         text = text.strip().rstrip('+#')
 

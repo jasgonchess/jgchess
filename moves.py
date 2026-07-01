@@ -9,7 +9,7 @@ Responsibility boundary:
 """
 
 import config
-from models import Position
+from position import Position
 from move import Move
 
 
@@ -62,7 +62,7 @@ def apply_move(position: Position, move: Move) -> Position:
     # ------------------------------------------------------------------
     squares = _flip_side_to_move(squares, position.turn)
 
-    return Position(squares)
+    return Position.from_squares(squares)
 
 
 # ---------------------------------------------------------------------------

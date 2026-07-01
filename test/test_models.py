@@ -5,7 +5,7 @@
 import pytest
 import config
 import utils
-from models import Position
+from position import Position
 from exceptions import InvalidFENException
 
 

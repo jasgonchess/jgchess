@@ -5,9 +5,51 @@
 import sqlite3
 from contextlib import contextmanager
 from collections.abc import Generator
-import config
 from exceptions import DatabaseConnectionException, DatabaseException
 from dataclasses import dataclass
+
+
+# ---------------------------------------------------------------------------
+# Signed/unsigned 64-bit conversion helpers.
+#
+# The chess domain (Position, etc.) always works with bitboards as unsigned
+# 64-bit integers — a plain occupancy mask. SQLite, however, stores INTEGER
+# columns as signed 64-bit values. These two functions exist solely to
+# bridge that storage detail, and are applied here, at the database
+# boundary, rather than inside the domain model.
+# ---------------------------------------------------------------------------
+
+def to_signed_64(value: int) -> int:
+    """Converts an unsigned 64-bit integer to a signed 64-bit integer.
+
+    Required because SQLite stores integers as signed values.
+
+    Args:
+        value: Unsigned integer in range 0 to 2**64-1.
+
+    Returns:
+        Signed integer in range -2**63 to 2**63-1.
+    """
+    if value >= (1 << 63):
+        return value - (1 << 64)
+    return value
+
+
+def to_unsigned_64(value: int) -> int:
+    """Converts a signed 64-bit integer back to an unsigned 64-bit integer.
+
+    Used when reading the bitboard from SQLite.
+
+    Args:
+        value: Signed integer in range -2**63 to 2**63-1.
+
+    Returns:
+        Unsigned integer in range 0 to 2**64-1.
+    """
+    if value < 0:
+        return value + (1 << 64)
+    return value
+
 
 @contextmanager
 def open_database(db_path: str) -> Generator[sqlite3.Connection, None, None]:
@@ -49,7 +91,10 @@ class PositionRecord:
 
     Attributes:
         id: Primary key from the database.
-        bitboard: Signed 64-bit integer representing occupied squares.
+        bitboard: Unsigned 64-bit integer representing occupied squares
+            (bit N = square N, a1=bit0, h8=bit63). The signed/unsigned
+            conversion required by SQLite's storage format is already
+            applied by fetch_position() before this object is built.
         pieces: BLOB with one nibble per piece in bitboard order.
         eval: Optional position evaluation in centipawns.
         comment: Optional bitmask of positional characteristics.
@@ -90,7 +135,7 @@ def fetch_position(
             return None
         return PositionRecord(
             id=row[0],
-            bitboard=row[1],
+            bitboard=to_unsigned_64(row[1]),
             pieces=row[2],
             eval=row[3],
             comment=row[4],
@@ -117,7 +162,10 @@ def insert_position(
 
     Args:
         conn: An open sqlite3.Connection, obtained via open_database().
-        bitboard: Signed 64-bit integer representing occupied squares.
+        bitboard: Unsigned 64-bit integer representing occupied squares
+            (bit N = square N, a1=bit0, h8=bit63), e.g. as returned by
+            Position.to_db_format(). The signed/unsigned conversion
+            required by SQLite's storage format is applied internally.
         pieces: BLOB with one nibble per piece in bitboard order.
         eval: Optional position evaluation in centipawns.
         comment: Optional bitmask of positional characteristics.
@@ -135,8 +183,9 @@ def insert_position(
         VALUES (?, ?, ?, ?, ?)
     """
     try:
+        signed_bitboard = to_signed_64(bitboard)
         cursor = conn.execute("BEGIN")
-        cursor = conn.execute(sql, (bitboard, pieces, eval, comment, eco))
+        cursor = conn.execute(sql, (signed_bitboard, pieces, eval, comment, eco))
         conn.commit()
         if cursor.rowcount == 0:
             return None

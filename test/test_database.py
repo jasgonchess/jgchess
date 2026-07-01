@@ -10,7 +10,7 @@ import os
 
 import config
 import utils
-from models import Position
+from position import Position
 from databases import insert_position
 from exceptions import DatabaseException
 

@@ -4,7 +4,7 @@ Tests the first moves of Fischer vs Spassky (1992) from the starting
 position, plus a few edge cases (disambiguation, invalid move, ambiguity).
 """
 
-from models import Position
+from position import Position
 from move import Move
 from exceptions import InvalidMoveException
 
